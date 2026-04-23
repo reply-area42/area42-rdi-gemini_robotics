@@ -3,10 +3,9 @@ from google.genai import types
 import cv2
 import numpy as np
 import json
-
+from secrets import API_KEY
 import position_calculator as pc
 
-# AIzaSyA0zwc9L64EC0Ob2hYNqtpSObubvZr7Hxg
 
 PROMPT = """
           Point to no more than 3 items in the image. The label returned
@@ -16,7 +15,7 @@ PROMPT = """
           "label": <label1>}, "depth": <depth>, ...]. The points are in [x, y] format
           normalized to [0-480 for vertical axis, 0-640 for horizontal axis]. Depth is normalized to 0-1000.
         """
-client = genai.Client(api_key="AIzaSyA0zwc9L64EC0Ob2hYNqtpSObubvZr7Hxg")
+client = genai.Client(api_key=API_KEY)
 
 RGB_img = cv2.imread("RGB_img.png")
 Depth_img = cv2.imread("Depth_img.png")
