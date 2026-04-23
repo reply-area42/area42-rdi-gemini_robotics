@@ -55,15 +55,19 @@ image_response = client.models.generate_content(
         ),
         PROMPT
     ],
-    config = types.GenerateContentConfig(
+    config=types.GenerateContentConfig(
         temperature=1.0,
-        thinking_config=types.ThinkingConfig(thinking_budget=0)
+        thinking_config=types.ThinkingConfig(thinking_budget=0),
+        response_mime_type="application/json",
     )
 )
 
-print(image_response)
+print(image_response.text)
 
-for el in image_response:
+objects = json.loads(image_response.text)
+
+
+for el in objects:
     print(el)
     x, y = el["point"]
     depth = el["depth"]
