@@ -6,7 +6,8 @@ def get_intrinsics():
 
     pipeline = rs.pipeline()
     config = rs.config()
-    config.enable_device("243122076269") # il serial number della tua D435i
+    ID = gri.get_rs_info()[0]
+    config.enable_device(f"{ID}") # il serial number della tua D435i
     config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
     config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
 
@@ -15,7 +16,7 @@ def get_intrinsics():
 
     pipeline.stop()
 
-    return intrinsics
+    return intrinsics, intrinsics.fx, intrinsics.fy, intrinsics.ppx, intrinsics.ppy
 
 if __name__ == "__main__":
     intrinsics = get_intrinsics()
