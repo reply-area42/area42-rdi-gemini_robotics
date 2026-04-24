@@ -8,7 +8,7 @@ import logging
 import time
 import sys
 
-import get_rs_info as get_rs
+import camera.get_rs_info as get_rs
 
 # Configure multiprocessing-safe logger
 logging_mp = mp.log_to_stderr()

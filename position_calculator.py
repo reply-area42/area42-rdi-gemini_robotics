@@ -1,8 +1,7 @@
+import intrinsics
 import numpy as np
 from dataclasses import dataclass
-
-
-@dataclass
+import pyrealsense2 as rs
 class CameraIntrinsics:
     """
     Parametri intrinseci della camera (modello pinhole).
@@ -13,13 +12,18 @@ class CameraIntrinsics:
         cx: coordinata x del punto principale (centro ottico) in pixel
         cy: coordinata y del punto principale (centro ottico) in pixel
     """
-    fx: float
-    fy: float
-    cx: float
-    cy: float
-
-    def __post_init__(self) -> None:
-        """Validazione dei parametri intrinseci dopo l'inizializzazione."""
+    
+    def __init__(self, device_id: str) -> None:
+        """
+        Inizializza i parametri intrinseci recuperandoli dal sensore RealSense.
+        
+        Parametri:
+            device_id: ID/serial number del dispositivo RealSense
+        """
+        # Recupera gli intrinsics dal sensore, non ho necessita di intrinsic quindi ignoro il primo elemento della tupla restituita
+        _, self.fx, self.fy, self.cx, self.cy = self._fetch_intrinsics_from_device(device_id)
+        
+        # Validazione dei parametri intrinseci
         if self.fx <= 0 or self.fy <= 0:
             raise ValueError(
                 f"Le lunghezze focali devono essere positive: fx={self.fx}, fy={self.fy}"
@@ -28,6 +32,30 @@ class CameraIntrinsics:
             raise ValueError(
                 f"Il punto principale deve avere coordinate non negative: cx={self.cx}, cy={self.cy}"
             )
+
+    @staticmethod
+    def _fetch_intrinsics_from_device(device_id: str) -> tuple:
+        """
+        Recupera i parametri intrinseci dal sensore RealSense.
+        
+        Parametri:
+            device_id: ID/serial number del dispositivo RealSense
+            
+        Restituisce:
+            Tupla (intrinsics_obj, fx, fy, cx, cy)
+        """
+        pipeline = rs.pipeline()
+        config = rs.config()
+        config.enable_device(device_id)
+        config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
+        config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
+
+        profile = pipeline.start(config)
+        intrinsics = profile.get_stream(rs.stream.color).as_video_stream_profile().get_intrinsics()
+
+        pipeline.stop()
+
+        return intrinsics, intrinsics.fx, intrinsics.fy, intrinsics.ppx, intrinsics.ppy
 
     def to_matrix(self) -> np.ndarray:
         """

@@ -6,8 +6,8 @@ from transformers import AutoProcessor, AutoModelForZeroShotObjectDetection
 import logging
 
 # Assumo che questi file esistano nella tua cartella
-from get_rs_info import *
-from read_D435 import *
+from camera.get_rs_info import *
+from camera.read_D435 import *
 
 import time
 
