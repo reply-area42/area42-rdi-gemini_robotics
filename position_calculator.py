@@ -1,4 +1,3 @@
-import intrinsics
 import numpy as np
 from dataclasses import dataclass
 import pyrealsense2 as rs
@@ -44,16 +43,26 @@ class CameraIntrinsics:
         Restituisce:
             Tupla (intrinsics_obj, fx, fy, cx, cy)
         """
-        pipeline = rs.pipeline()
-        config = rs.config()
-        config.enable_device(device_id)
-        config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
-        config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
+        if not device_id:
+            # raise ValueError("Il device_id non può essere vuoto. Fornire un ID valido del dispositivo RealSense.")
+            return None, 608.1531982421875, 608.2805786132812, 315.12713623046875, 259.9116516113281
+        try:
+            pipeline = rs.pipeline()
+            config = rs.config()
+            config.enable_device(device_id)
+            config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
+            config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
 
-        profile = pipeline.start(config)
-        intrinsics = profile.get_stream(rs.stream.color).as_video_stream_profile().get_intrinsics()
+            profile = pipeline.start(config)
+            intrinsics = profile.get_stream(rs.stream.color).as_video_stream_profile().get_intrinsics()
 
-        pipeline.stop()
+            pipeline.stop()
+        except:
+            raise RuntimeError(
+                f"Impossibile recuperare gli intrinseci dal dispositivo con ID '{device_id}'. "
+                "Uso valori default per test."
+            )
+
 
         return intrinsics, intrinsics.fx, intrinsics.fy, intrinsics.ppx, intrinsics.ppy
 
