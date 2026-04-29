@@ -140,10 +140,7 @@ if depth_value > 0:
     point_camera = pc.deproject_pixel(u_pixel, v_pixel, depth_value, intrinsics)    
     print(f"point_camera: {point_camera*1000}")  # in millimetri
 
-    point_camera_new = np.array([float(point_camera[2]), -float(point_camera[0]), -float(point_camera[1])])
-    print(f"point_camera_new: {point_camera_new*1000}")  # in millimetri
-
-    point_waist = pc.transform_to_waist(point_camera_new, T_cam_to_waist)  
+    point_waist = pc.transform_to_waist(point_camera, T_cam_to_waist)  
     print(f"point_waist: {point_waist*1000}") # in millimetri
 
 

@@ -199,9 +199,9 @@ def deproject_pixel(
     y = (v - intrinsics.cy) * z / intrinsics.fy
     return np.array([x, y, z], dtype=np.float64)
 
-def camera_point_trasformation( P_c: np.ndarray) -> np.ndarray:
+def camera_point_trasformation(P_c: np.ndarray) -> np.ndarray:
     # Invertiamo i punti per poter fare rotazione su azze y da sistema di riferimento camera a sistema di riferimento robot
-    P_c = np.array([P_c[1], -P_c[2], -P_c[0]], dtype=np.float64)
+    P_c = np.array([P_c[2], -P_c[0], -P_c[1]], dtype=np.float64)
     return P_c
 
 
