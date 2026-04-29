@@ -1,4 +1,11 @@
 import argparse
+import logging_mp
+
+# Configura il logging PRIMA di altri import
+logging_mp.basicConfig(level=logging_mp.INFO)
+logger_mp = logging_mp.getLogger(__name__)
+
+from wcwidth import width
 from camera.image_client_depth import ImageClient_depth
 import cv2
 import numpy as np
@@ -6,17 +13,14 @@ import json
 from secrets import API_KEY
 from google import genai
 from google.genai import types
+from robot_visualizer import visualize_robot_on_meshcat
 import position_calculator as pc
 from call_gemini import call_model
 import threading
 import time
-from camera.image_client_depth import ImageClient_depth
-import shared_memory
+from multiprocessing import shared_memory
 
-import logging_mp
 
-logging_mp.basicConfig(level=logging_mp.INFO)
-logger_mp = logging_mp.getLogger(__name__)
 
 
 from robot_control.robot_arm import G1_29_ArmController
@@ -34,7 +38,13 @@ from sshkeyboard import listen_keyboard, stop_listening
 
 # Define the prompt for Gemini to return a list of trajectory points
 PROMPT = """
-Analyze the provided RGB and depth images (horizontally stacked) to detect a trajectory or path in the scene, such as a line or sequence of points to follow. Return a JSON list of points: [{"u": <u_pixel>, "v": <v_pixel>, "depth_mm": <depth_in_mm>}, ...]. Coordinates should be in pixel format (u, v) normalized to the image dimensions, and depth in millimeters. Limit to max 10 points. No prose, only JSON.
+Analyze the provided RGB and depth images (horizontally stacked) to detect 
+the cylinder and the basket, then generate a trajectory of 15 points moving the cylinder
+from its current position to the basket.
+ Return a list of points following this JSON format:
+ [{"u": <u_pixel>, "v": <v_pixel>, "depth_mm": <depth_in_mm>}, ...].
+Coordinates should be in pixel format (u, v) normalized to 0-1000 range,
+and depth in millimeters.
 """
 
 def main():
@@ -131,7 +141,10 @@ def main():
                 v = point['v']
                 depth_mm = point['depth_mm']
                 if depth_mm > 0:
-                    point_3d = pc.deproject_pixel(u, v, depth_mm, intrinsics)
+                    height, width = rgb_image.shape[:2]
+                    abs_y1 = int(u / 1000 * height)
+                    abs_x1 = int(v / 1000 * (width*2))
+                    point_3d = pc.deproject_pixel(abs_y1, abs_x1, depth_mm, intrinsics)
                     trajectory_3d.append(point_3d)
                     print(f"3D point: {point_3d}")
 
@@ -161,12 +174,13 @@ def main():
                     logger_mp.debug(f"ik:\t{round(time_ik_end - time_ik_start, 6)}")
                     arm_ctrl.ctrl_dual_arm(sol_q, sol_tauff)
                     time.sleep(0.2)  # pausa breve per vedere il movimento
+                    visualize_robot_on_meshcat(sol_q[:7], sol_q[7:14])  # visualizza su meshcat
 
 
             
         except Exception as e:
             print(f"Error calling Gemini or parsing response: {e}")
-        
+
     finally:
         # Clean up shared memory (always executed)
         if tv_img_shm is not None:
