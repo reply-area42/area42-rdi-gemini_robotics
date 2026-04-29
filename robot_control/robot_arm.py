@@ -8,12 +8,12 @@ from unitree_sdk2py.core.channel import ChannelPublisher, ChannelSubscriber, Cha
 from unitree_sdk2py.idl.unitree_hg.msg.dds_ import ( LowCmd_  as hg_LowCmd, LowState_ as hg_LowState) # idl for g1, h1_2
 from unitree_sdk2py.idl.default import unitree_hg_msg_dds__LowCmd_
 from unitree_sdk2py.utils.crc import CRC
-from teleop.robot_control.find_interface import find_interface_with_subnet
+from robot_control.find_interface import find_interface_with_subnet
 from unitree_sdk2py.idl.unitree_go.msg.dds_ import ( LowCmd_  as go_LowCmd, LowState_ as go_LowState)  # idl for h1
 from unitree_sdk2py.idl.default import unitree_go_msg_dds__LowCmd_
 
 import logging_mp
-logger_mp = logging_mp.getLogger(__name__)
+#logger_mp = logging_mp.getLogger(__name__)
 
 
 kTopicLowCommand_Debug  = "rt/lowcmd"
