@@ -11,7 +11,7 @@ from call_gemini import call_model
 import threading
 import time
 from camera.image_client_depth import ImageClient_depth
-import shared_memory
+from multiprocessing import shared_memory
 
 import logging_mp
 
