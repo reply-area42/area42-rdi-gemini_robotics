@@ -18,6 +18,10 @@ import position_calculator as pc
 from call_gemini import call_model
 import threading
 import time
+<<<<<<< HEAD
+=======
+from camera.image_client_depth import ImageClient_depth
+>>>>>>> d8f63dbe39cf7139d1c5903559b83ac07220468d
 from multiprocessing import shared_memory
 
 
