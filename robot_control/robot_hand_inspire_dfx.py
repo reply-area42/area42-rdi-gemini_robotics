@@ -1,10 +1,10 @@
-from teleop.robot_control.find_interface import find_interface_with_subnet
+from robot_control.find_interface import find_interface_with_subnet
 from unitree_sdk2py.core.channel import ChannelPublisher, ChannelSubscriber, ChannelFactoryInitialize # dds
 from unitree_sdk2py.idl.unitree_go.msg.dds_ import MotorCmds_, MotorStates_                           # idl
 from unitree_sdk2py.idl.default import unitree_go_msg_dds__MotorCmd_
 from inspire_sdkpy import inspire_hand_defaut, inspire_dds
  
-from teleop.robot_control.hand_retargeting import HandRetargeting, HandType
+from robot_control.hand_retargeting import HandRetargeting, HandType
 import numpy as np
 from enum import Enum, IntEnum
 import threading

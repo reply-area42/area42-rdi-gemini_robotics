@@ -18,10 +18,6 @@ import position_calculator as pc
 from call_gemini import call_model
 import threading
 import time
-<<<<<<< HEAD
-=======
-from camera.image_client_depth import ImageClient_depth
->>>>>>> d8f63dbe39cf7139d1c5903559b83ac07220468d
 from multiprocessing import shared_memory
 
 
@@ -29,10 +25,8 @@ from multiprocessing import shared_memory
 
 from robot_control.robot_arm import G1_29_ArmController
 from robot_control.robot_arm_ik import G1_29_ArmIK
-from robot_control.robot_hand_inspire_dfx import Inspire_Controller
-from image_server.image_client_with_depth import ImageClient_depth
-from image_server.realsense import RealSenseCamera
-from image_server.image_client import ImageClient
+#from robot_control.robot_hand_inspire_dfx import Inspire_Controller
+
 # from teleop.utils.episode_writer import EpisodeWriter
 # from teleop.utils.ipc import IPC_Server
 from sshkeyboard import listen_keyboard, stop_listening

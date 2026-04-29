@@ -26,7 +26,7 @@ class G1_29_ArmIK:
         if not self.Unit_Test:
             self.robot = pin.RobotWrapper.BuildFromURDF('../assets/g1/g1_body29_hand14.urdf', '../assets/g1/')
         else:
-            self.robot = pin.RobotWrapper.BuildFromURDF('../../assets/g1/g1_body29_hand14.urdf', '../../assets/g1/') # for test
+            self.robot = pin.RobotWrapper.BuildFromURDF('../assets/g1/g1_body29_hand14.urdf', '../assets/g1/') # for test
 
         self.mixed_jointsToLockIDs = [
                                         "left_hip_pitch_joint" ,
