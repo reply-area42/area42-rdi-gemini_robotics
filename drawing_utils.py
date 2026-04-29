@@ -130,7 +130,7 @@ def plot_bounding_boxes(img, bounding_boxes):
       )
 
   # Display the image
-  img.save("Dio.png")
+  img.save("images_bounding_boxes.png")
 
 
 @dataclasses.dataclass(frozen=True)

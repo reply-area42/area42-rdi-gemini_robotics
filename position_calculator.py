@@ -190,6 +190,10 @@ def deproject_pixel(
     y = (v - intrinsics.cy) * z / intrinsics.fy
     return np.array([x, y, z], dtype=np.float64)
 
+def camera_point_trasformation( P_c: np.ndarray) -> np.ndarray:
+    # Invertiamo i punti per poter fare rotazione su azze y da sistema di riferimento camera a sistema di riferimento robot
+    P_c = np.array([P_c[1], -P_c[2], -P_c[0]], dtype=np.float64)
+    return P_c
 
 
 def transform_to_waist(    point_cam: np.ndarray,
@@ -203,7 +207,8 @@ def transform_to_waist(    point_cam: np.ndarray,
     if T_cam_to_waist.shape != (4, 4):
         raise ValueError(            f"T_cam_to_waist deve essere 4x4, ricevuta forma {T_cam_to_waist.shape}"
         )
-    # Conversione in coordinate omogenee: aggiungiamo 1 come quarta componente    
+    # Conversione in coordinate omogenee: aggiungiamo 1 come quarta componente  
+    point_cam = camera_point_trasformation(point_cam) #trasformazione da sistema di riferimento camera a sistema di riferimento robot     
     point_cam_hom = np.array([
         point_cam[0],  point_cam[1], point_cam[2], 1.0 ], dtype=np.float64)
 
@@ -212,7 +217,7 @@ def transform_to_waist(    point_cam: np.ndarray,
     # Estrazione delle coordinate 3D (le prime 3 componenti)    
     point_waist = point_waist_hom[:3]
 
-    return point_waist
+    return point_waist #ritorna il punto in coordinate del waist
 
 
 def inverse_transform(T: np.ndarray) -> np.ndarray:

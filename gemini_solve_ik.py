@@ -1,0 +1,128 @@
+import argparse
+from camera.image_client_depth import ImageClient_depth
+import cv2
+import numpy as np
+import json
+from secrets import API_KEY
+from google import genai
+from google.genai import types
+import position_calculator as pc
+from call_gemini import call_model
+import threading
+import time
+from camera.image_client_depth import ImageClient_depth
+import shared_memory
+
+# filepath: /home/area42-user/area42-rdi-gemini_robotics/gemini_solve_ik.py
+
+# Define the prompt for Gemini to return a list of trajectory points
+PROMPT = """
+Analyze the provided RGB and depth images (horizontally stacked) to detect a trajectory or path in the scene, such as a line or sequence of points to follow. Return a JSON list of points: [{"u": <u_pixel>, "v": <v_pixel>, "depth_mm": <depth_in_mm>}, ...]. Coordinates should be in pixel format (u, v) normalized to the image dimensions, and depth in millimeters. Limit to max 10 points. No prose, only JSON.
+"""
+
+def main():
+    parser = argparse.ArgumentParser(description="Script to initialize CameraIntrinsics, stream RGB and depth, and use Gemini to detect trajectory points.")
+    parser.add_argument('--camera_id', type=str, required=True, help='Camera device ID/serial number')
+    # ---------------------------  if we need to add more arguments, we can do it here ---------------------------
+    args = parser.parse_args()
+
+    tv_img_shm = None
+    tv_depth_shm = None
+
+    try: #blocco di try per assicurarsi che la memoria condivisa venga pulita anche in caso di errori
+        # Initialize CameraIntrinsics
+        try:
+            intrinsics = pc.CameraIntrinsics(args.camera_id)
+            print(f"CameraIntrinsics initialized with ID: {args.camera_id}")
+            print(f"fx={intrinsics.fx}, fy={intrinsics.fy}, cx={intrinsics.cx}, cy={intrinsics.cy}")
+        except Exception as e:
+            print(f"Error initializing CameraIntrinsics: {e}")
+            return
+
+        # Set up image client for RGB and depth streaming 
+        img_config = {
+            'fps': 15,
+            'head_camera_type': 'realsense',
+            'head_camera_image_shape': [720, 1280],  # Head camera resolution
+            'depth_image_shape': [720, 1280],
+            'head_camera_id_numbers': [args.camera_id],  # Use the provided camera ID
+        }
+
+        tv_img_shape = (img_config['head_camera_image_shape'][0], img_config['head_camera_image_shape'][1], 3)
+        tv_depth_shape = tuple(img_config['depth_image_shape'])
+
+        # Create shared memory for RGB and depth
+        tv_img_shm = shared_memory.SharedMemory(create=True, size=np.prod(tv_img_shape) * np.uint8().itemsize)
+        tv_img_array = np.ndarray(tv_img_shape, dtype=np.uint8, buffer=tv_img_shm.buf)
+
+        tv_depth_shm = shared_memory.SharedMemory(create=True, size=np.prod(tv_depth_shape) * np.uint16().itemsize)
+        tv_depth_array = np.ndarray(tv_depth_shape, dtype=np.uint16, buffer=tv_depth_shm.buf)
+
+        # Initialize ImageClient_depth
+        img_client = ImageClient_depth(
+            tv_img_shape=tv_img_shape,
+            tv_img_shm_name=tv_img_shm.name,
+            tv_img_shape_resize=None,  # Not resizing for this script
+            tv_img_resized_shm_name=None,
+            server_address="192.168.123.164",  # Assuming same as teleop.py
+            tv_depth_shape=tv_depth_shape,
+            tv_depth_shm_name=tv_depth_shm.name,
+        )
+
+        # Start image receiving thread
+        image_receive_thread = threading.Thread(target=img_client.receive_process, daemon=True)
+        image_receive_thread.start()
+
+        # Wait a bit for images to start streaming
+        time.sleep(2)
+
+        # Capture current RGB and depth images
+        rgb_image = tv_img_array.copy()
+        depth_image = tv_depth_array.copy()
+
+        # Combine RGB and depth for Gemini input 
+        # Normalize depth for visualization
+        depth_normalized = cv2.normalize(depth_image, None, 0, 255, cv2.NORM_MINMAX, dtype=cv2.CV_8U)
+        depth_colormap = cv2.applyColorMap(depth_normalized, cv2.COLORMAP_JET)
+        combined = np.hstack((rgb_image, depth_colormap)).astype(np.uint8)
+
+        # Encode the combined image
+        success, encoded_image = cv2.imencode('.jpg', combined)
+        if not success:
+            print("Failed to encode combined image")
+            return
+        image_bytes = encoded_image.tobytes()
+
+        # Call Gemini with the prompt
+        try:
+            response = call_model(image_bytes, PROMPT)
+            trajectory_data = json.loads(response.text)
+            print("Trajectory points from Gemini:")
+            for point in trajectory_data:
+                print(point)
+            
+            # Optionally, deproject to 3D points using intrinsics
+            trajectory_3d = []
+            for point in trajectory_data:
+                u = point['u']
+                v = point['v']
+                depth_mm = point['depth_mm']
+                if depth_mm > 0:
+                    point_3d = pc.deproject_pixel(u, v, depth_mm, intrinsics)
+                    trajectory_3d.append(point_3d)
+                    print(f"3D point: {point_3d}")
+            
+        except Exception as e:
+            print(f"Error calling Gemini or parsing response: {e}")
+        
+    finally:
+        # Clean up shared memory (always executed)
+        if tv_img_shm is not None:
+            tv_img_shm.close()
+            tv_img_shm.unlink()
+        if tv_depth_shm is not None:
+            tv_depth_shm.close()
+            tv_depth_shm.unlink()
+
+if __name__ == "__main__":
+    main()
