@@ -89,23 +89,23 @@ image_response = """[
     
 
 
-# import intrinsics 
+# from camera.intrinsics import intrinsics
 # _, fx, fy, cx, cy = intrinsics.get_intrinsics()
 
-fx=608.1531982421875
-fy=608.2805786132812
-cx=315.12713623046875
-cy=259.9116516113281
+# fx=608.1531982421875
+# fy=608.2805786132812
+# cx=315.12713623046875
+# cy=259.9116516113281
 
-intrinsics = pc.CameraIntrinsics(fx, fy, cx, cy)
-print(f"\n[Intrinseci camera]")    
-print(f"  fx={intrinsics.fx}, fy={intrinsics.fy}")
-print(f"  cx={intrinsics.cx}, cy={intrinsics.cy}")    
-print(f"\n  Matrice K:")    
+intrinsics = pc.CameraIntrinsics(None)
+# print(f"\n[Intrinseci camera]")    
+# print(f"  fx={intrinsics.fx}, fy={intrinsics.fy}")
+# print(f"  cx={intrinsics.cx}, cy={intrinsics.cy}")    
+# print(f"\n  Matrice K:")    
 K = intrinsics.to_matrix()
 
-for i in range(3):        
-    print(f"    [{K[i, 0]:8.2f}  {K[i, 1]:8.2f}  {K[i, 2]:8.2f}]")
+# for i in range(3):        
+#     print(f"    [{K[i, 0]:8.2f}  {K[i, 1]:8.2f}  {K[i, 2]:8.2f}]")
 
 # # rs -> torso
 # # <origin xyz="0.0576235 0.01753 0.42987" rpy="0 0.8307767239493009 0"/>
@@ -134,61 +134,16 @@ T_cam_to_waist = pc.build_T_cam_to_waist(R_cam_to_waist, t_cam_to_waist)
 # u_pixel, v_pixel = width // 2, height // 2       
 # depth_value = depth_image[int(round(v_pixel)), int(round(u_pixel))]
 depth_value = 600  # esempio di valore di profondità in millimetri
-u_pixel, v_pixel = 640 // 2, 480 // 2  
+u_pixel, v_pixel = 640 // 2, 480 // 2
 
 if depth_value > 0:
     point_camera = pc.deproject_pixel(u_pixel, v_pixel, depth_value, intrinsics)    
-    print(f"point_camera: {point_camera}")
+    print(f"point_camera: {point_camera*1000}")  # in millimetri
 
-    point_waist = pc.transform_to_waist(point_camera, T_cam_to_waist)  
-    print(f"point_waist: {point_waist}")
+    point_camera_new = np.array([float(point_camera[2]), -float(point_camera[0]), -float(point_camera[1])])
+    print(f"point_camera_new: {point_camera_new*1000}")  # in millimetri
 
-
-
-
-
+    point_waist = pc.transform_to_waist(point_camera_new, T_cam_to_waist)  
+    print(f"point_waist: {point_waist*1000}") # in millimetri
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# import math
-# import numpy as np
-
-
-
-# # parameters
-
-# pitch = 0.8307767239493009
-# cy = math.cos(pitch)
-# sy = math.sin(pitch)
-# # Ry(pitch)
-# Ry = np.array([[cy, 0, sy],
-#                [0, 1, 0],
-#                [-sy, 0, cy]], dtype=float)
-# R_y = Ry
-
-
-# t_rs_torso = np.array([0.0576235, 0.01753, 0.42987], dtype=float).reshape((3,))
-# T_rs_torso = np.vstack([np.hstack([R_y, t_rs_torso.reshape(3,1)]), np.array([0,0,0,1], dtype=float)])
-
-
-# t_torso_waist = np.array([-0.0039635, 0, 0.044], dtype=float)
-# T_torso_waist = np.vstack([np.hstack([np.eye(3), t_torso_waist.reshape(3,1)]), np.array([0,0,0,1], dtype=float)])
-
-
-# T_rs_waist = T_rs_torso @ T_torso_waist
-# T_waist_rs = np.linalg.inv(T_rs_waist)
-# T_rs_torso, T_torso_waist, T_rs_waist, T_waist_rs
