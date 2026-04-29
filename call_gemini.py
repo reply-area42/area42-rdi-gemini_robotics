@@ -3,7 +3,7 @@ from google.genai import types
 import cv2
 import numpy as np
 import json
-from secrets import API_KEY
+from secrets_API import API_KEY
 import position_calculator as pc
 from PIL import ImageColor, ImageDraw, ImageFont, Image
 

@@ -211,31 +211,7 @@ class ImageClient_depth:
         logger_mp.info(
             f"Image client started. Color: tcp://{self._server_address}:{self._color_port}, "
             f"Depth: tcp://{self._server_address}:{self._depth_port}"
-        )
-
-        intrinsics = pc.CameraIntrinsics(fx, fy, cx, cy)
-        print(f"\n[Intrinseci camera]")    
-        print(f"  fx={intrinsics.fx}, fy={intrinsics.fy}")
-        print(f"  cx={intrinsics.cx}, cy={intrinsics.cy}")    
-        print(f"\n  Matrice K:")    
-        K = intrinsics.to_matrix()
-
-        for i in range(3):        
-            print(f"    [{K[i, 0]:8.2f}  {K[i, 1]:8.2f}  {K[i, 2]:8.2f}]")
-
-        roll = 0.0                           # Sostituire con valore misurato [rad]    
-        pitch = np.radians(-47.0)            # Sostituire con valore misurato [rad]    
-        yaw = 0.0                            # Sostituire con valore misurato [rad]
-        
-        tx = 0.05    # Avanti rispetto alla vita [m] - Sostituire con valore misurato    
-        ty = 0.00   # A sinistra rispetto alla vita [m] - Sostituire con valore misurato    
-        tz = 0.48    # Sopra la vita [m] - Sostituire con valore misurato
-
-        # Costruzione della matrice di rotazione e della trasformazione omogenea    
-        R_cam_to_waist = pc.build_rotation_matrix(roll, pitch, yaw)    
-        t_cam_to_waist = np.array([tx, ty, tz])    
-        T_cam_to_waist = pc.build_T_cam_to_waist(R_cam_to_waist, t_cam_to_waist)
-                    
+        )         
 
         try:
             while self.running:
@@ -293,19 +269,10 @@ class ImageClient_depth:
                     if cv2.waitKey(1) & 0xFF == ord("q"):
                         self.running = False
 
-                    u_pixel, v_pixel = width // 2, height // 2       
-                    depth_value = depth_image[int(round(v_pixel)), int(round(u_pixel))]
 
-                    if depth_value > 0:
-                        point_camera = pc.deproject_pixel(u_pixel, v_pixel, depth_value, intrinsics)    
-                        print(f"point_camera: {point_camera}")
-
-                        point_waist = pc.transform_to_waist(point_camera, T_cam_to_waist)  
-                        print(f"point_waist: {point_waist}")
-
-                if self._enable_performance_eval:
-                    self._update_performance_metrics(timestamp, frame_id, receive_time)
-                    self._print_performance_metrics()
+                # if self._enable_performance_eval:
+                #     self._update_performance_metrics(timestamp, frame_id, receive_time)
+                #     self._print_performance_metrics()
 
         except KeyboardInterrupt:
             logger_mp.info("Image client interrupted by user.")

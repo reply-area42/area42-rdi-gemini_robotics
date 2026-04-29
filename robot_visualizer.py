@@ -4,7 +4,7 @@ import pinocchio as pin
 from pinocchio.visualize import MeshcatVisualizer
 import os
 
-def visualize_robot_on_meshcat(q_left, q_right, urdf_path="g1_dof_with_inspire_hands.urdf"):
+def visualize_robot_on_meshcat(sol_q_total, urdf_path="g1_dof_with_inspire_hands.urdf"):
     """
     Visualizza il robot su meshcat con gli angoli calcolati da solve_ik
     Parametri:
@@ -20,14 +20,18 @@ def visualize_robot_on_meshcat(q_left, q_right, urdf_path="g1_dof_with_inspire_h
     viz = MeshcatVisualizer(model, collision_model, visual_model)
     viz.initViewer(open=True)   # apre il browser automaticamente
     viz.loadViewerModel()
+    time.sleep(1)
+    for sol_q in sol_q_total:
+        q_left=sol_q[:7]
+        q_right=sol_q[7:14]
+        # Parte dalla postura neutra e sovrascrive i giunti delle braccia
+        q = pin.neutral(model)
+        n = min(14, model.nq)
+        q[:7]  = q_left[:min(7, n)]
+        q[7:n] = q_right[:min(7, n - 7)]
 
-    # Parte dalla postura neutra e sovrascrive i giunti delle braccia
-    q = pin.neutral(model)
-    n = min(14, model.nq)
-    q[:7]  = q_left[:min(7, n)]
-    q[7:n] = q_right[:min(7, n - 7)]
-
-    viz.display(q)
+        viz.display(q)
+        time.sleep(1)
 
     print("Robot visualizzato su meshcat!")
     print(f"Braccio sx: {q_left}")

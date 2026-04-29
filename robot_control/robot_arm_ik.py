@@ -8,7 +8,7 @@ from pinocchio.visualize import MeshcatVisualizer
 import os
 import sys
 import logging_mp
-# logger_mp = logging_mp.getLogger(__name__)
+
 
 
 parent2_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -23,8 +23,10 @@ class G1_29_ArmIK:
         self.Unit_Test = Unit_Test
         self.Visualization = Visualization
 
-        urdf_path = os.path.join(parent2_dir, 'assets', 'g1', 'g1_dof_with_inspire_hands.urdf')
-        self.robot = pin.RobotWrapper.BuildFromURDF(urdf_path, parent2_dir)
+        if not self.Unit_Test:
+            self.robot = pin.RobotWrapper.BuildFromURDF('assets/g1/g1_body29_hand14.urdf', 'assets/g1/')
+        else:
+            self.robot = pin.RobotWrapper.BuildFromURDF('assets/g1/g1_body29_hand14.urdf', 'assets/g1/') # for test
 
         self.mixed_jointsToLockIDs = [
                                         "left_hip_pitch_joint" ,
@@ -202,6 +204,7 @@ class G1_29_ArmIK:
         return robot_left_pose, robot_right_pose
 
     def solve_ik(self, left_wrist, right_wrist, current_lr_arm_motor_q = None, current_lr_arm_motor_dq = None):
+
         if current_lr_arm_motor_q is not None:
             self.init_data = current_lr_arm_motor_q
         self.opti.set_initial(self.var_q, self.init_data)
@@ -215,6 +218,9 @@ class G1_29_ArmIK:
         self.opti.set_value(self.param_tf_r, right_wrist)
         self.opti.set_value(self.var_q_last, self.init_data) # for smooth
 
+        logger_mp = logging_mp.getLogger(__name__)
+        logger_mp.info("1")
+
         try:
             sol = self.opti.solve()
             # sol = self.opti.solve_limited()
@@ -227,7 +233,7 @@ class G1_29_ArmIK:
                 v = current_lr_arm_motor_dq * 0.0
             else:
                 v = (sol_q - self.init_data) * 0.0
-
+       
             self.init_data = sol_q
 
             sol_tauff = pin.rnea(self.reduced_robot.model, self.reduced_robot.data, sol_q, v, np.zeros(self.reduced_robot.model.nv))
@@ -238,7 +244,7 @@ class G1_29_ArmIK:
             return sol_q, sol_tauff
         
         except Exception as e:
-            logger_mp.error(f"ERROR in convergence, plotting debug info.{e}")
+            logger_mp.info(f"ERROR in convergence, plotting debug info.{e}")
 
             sol_q = self.opti.debug.value(self.var_q)
             self.smooth_filter.add_data(sol_q)
@@ -262,14 +268,29 @@ class G1_29_ArmIK:
         
     def get_current_left_wrist_pose(self, current_lr_arm_q):
         """Calcola la posa attuale del polso sinistro via FK Pinocchio."""
-        pin.framesForwardKinematics(self.reduced_robot.model, self.reduced_robot.data, current_lr_arm_q)
-        T = self.reduced_robot.data.oMf[self.L_hand_id].homogeneous
-        return np.array(T)
+        #pin.framesForwardKinematics(self.reduced_robot.model, self.reduced_robot.data, current_lr_arm_q)
+        L_tf_target = pin.SE3(
+            pin.Quaternion(1, 0, 0, 0),
+            np.array([0.25, +0.25, 0.1]),
+        )
+        logger_mp = logging_mp.getLogger(__name__)
+        
+        #T = self.reduced_robot.data.oMf[self.L_hand_id].homogeneous
+        logger_mp.info("get_current_left_wrist_pose")
+        return L_tf_target.homogeneous
     
     def get_current_right_wrist_pose(self, current_lr_arm_q):
-        pin.framesForwardKinematics(self.reduced_robot.model, self.reduced_robot.data, current_lr_arm_q)
-        T = self.reduced_robot.data.oMf[self.R_hand_id].homogeneous
-        return np.array(T)
+        #pin.framesForwardKinematics(self.reduced_robot.model, self.reduced_robot.data, current_lr_arm_q)
+        logger_mp = logging_mp.getLogger(__name__)
+        
+        # T = self.reduced_robot.data.oMf[self.R_hand_id].homogeneous
+        logger_mp.info("get_current_right_wrist_pose")
+
+        R_tf_target = pin.SE3(
+            pin.Quaternion(1, 0, 0, 0),
+            np.array([0.25, -0.25, 0.1]),
+        )
+        return R_tf_target.homogeneous
     
     def solve_tau(self, current_lr_arm_motor_q=None, current_lr_arm_motor_dq=None):
         try:
@@ -293,8 +314,10 @@ class G1_23_ArmIK:
         self.Unit_Test = Unit_Test
         self.Visualization = Visualization
 
-        urdf_path = os.path.join(parent2_dir, 'assets', 'g1', 'g1_body23.urdf')
-        self.robot = pin.RobotWrapper.BuildFromURDF(urdf_path, parent2_dir)
+        if not self.Unit_Test:
+            self.robot = pin.RobotWrapper.BuildFromURDF('../assets/g1/g1_body23.urdf', '../assets/g1/')
+        else:
+            self.robot = pin.RobotWrapper.BuildFromURDF('../../assets/g1/g1_body23.urdf', '../../assets/g1/') # for test
 
         self.mixed_jointsToLockIDs = [
                                         "left_hip_pitch_joint" ,
@@ -518,8 +541,10 @@ class H1_2_ArmIK:
         self.Unit_Test = Unit_Test
         self.Visualization = Visualization
 
-        urdf_path = os.path.join(parent2_dir, 'assets', 'h1_2', 'h1_2.urdf')
-        self.robot = pin.RobotWrapper.BuildFromURDF(urdf_path, parent2_dir)
+        if not self.Unit_Test:
+            self.robot = pin.RobotWrapper.BuildFromURDF('../assets/h1_2/h1_2.urdf', '../assets/h1_2/')
+        else:
+            self.robot = pin.RobotWrapper.BuildFromURDF('../../assets/h1_2/h1_2.urdf', '../../assets/h1_2/') # for test
 
         self.mixed_jointsToLockIDs = [
                                       "left_hip_yaw_joint",
@@ -766,8 +791,10 @@ class H1_ArmIK:
         self.Unit_Test = Unit_Test
         self.Visualization = Visualization
 
-        urdf_path = os.path.join(parent2_dir, 'assets', 'h1', 'h1_with_hand.urdf')
-        self.robot = pin.RobotWrapper.BuildFromURDF(urdf_path, parent2_dir)
+        if not self.Unit_Test:
+            self.robot = pin.RobotWrapper.BuildFromURDF('../assets/h1/h1_with_hand.urdf', '../assets/h1/')
+        else:
+            self.robot = pin.RobotWrapper.BuildFromURDF('../../assets/h1/h1_with_hand.urdf', '../../assets/h1/') # for test
 
         self.mixed_jointsToLockIDs = [
                                         "right_hip_roll_joint",

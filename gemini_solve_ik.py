@@ -6,11 +6,11 @@ logging_mp.basicConfig(level=logging_mp.INFO)
 logger_mp = logging_mp.getLogger(__name__)
 
 from wcwidth import width
-from camera.image_client_depth import ImageClient_depth
+from image_server.image_client_with_depth import ImageClient_depth
 import cv2
 import numpy as np
 import json
-from secrets import API_KEY
+from secrets_API import API_KEY
 from google import genai
 from google.genai import types
 from robot_visualizer import visualize_robot_on_meshcat
@@ -19,7 +19,7 @@ from call_gemini import call_model
 import threading
 import time
 from multiprocessing import shared_memory
-
+from camera.read_D435 import RealSenseCamera
 
 
 
@@ -54,62 +54,66 @@ def main():
     tv_img_shm = None
     tv_depth_shm = None
 
-    
+    logger_mp.info("Initializing robot arm controller and IK solver...")
     arm_ik = G1_29_ArmIK(Visualization=False)
-    arm_ctrl = G1_29_ArmController(motion_mode=args.motion, simulation_mode=args.sim)
-    print("G1_29 Initialized")
+    logger_mp.info("Arm IK solver initialized")
+    arm_ctrl = G1_29_ArmController(False, False)
+    logger_mp.info("G1_29 Initialized")
             
 
     try: #blocco di try per assicurarsi che la memoria condivisa venga pulita anche in caso di errori
         # Initialize CameraIntrinsics
         try:
             intrinsics = pc.CameraIntrinsics(args.camera_id)
-            print(f"CameraIntrinsics initialized with ID: {args.camera_id}")
-            print(f"fx={intrinsics.fx}, fy={intrinsics.fy}, cx={intrinsics.cx}, cy={intrinsics.cy}")
+            logger_mp.info(f"CameraIntrinsics initialized with ID: {args.camera_id}")
+            logger_mp.info(f"fx={intrinsics.fx}, fy={intrinsics.fy}, cx={intrinsics.cx}, cy={intrinsics.cy}")
         except Exception as e:
-            print(f"Error initializing CameraIntrinsics: {e}")
+            logger_mp.error(f"Error initializing CameraIntrinsics: {e}")
             return
 
         # Set up image client for RGB and depth streaming 
-        img_config = {
-            'fps': 15,
-            'head_camera_type': 'realsense',
-            'head_camera_image_shape': [720, 1280],  # Head camera resolution
-            'depth_image_shape': [720, 1280],
-            'head_camera_id_numbers': [args.camera_id],  # Use the provided camera ID
-        }
+        # img_config = {
+        #     'fps': 15,
+        #     'head_camera_type': 'realsense',
+        #     'head_camera_image_shape': [720, 1280],  # Head camera resolution
+        #     'depth_image_shape': [720, 1280],
+        #     'head_camera_id_numbers': [args.camera_id],  # Use the provided camera ID
+        # }
 
-        tv_img_shape = (img_config['head_camera_image_shape'][0], img_config['head_camera_image_shape'][1], 3)
-        tv_depth_shape = tuple(img_config['depth_image_shape'])
+        # tv_img_shape = (img_config['head_camera_image_shape'][0], img_config['head_camera_image_shape'][1], 3)
+        # tv_depth_shape = tuple(img_config['depth_image_shape'])
 
-        # Create shared memory for RGB and depth
-        tv_img_shm = shared_memory.SharedMemory(create=True, size=np.prod(tv_img_shape) * np.uint8().itemsize)
-        tv_img_array = np.ndarray(tv_img_shape, dtype=np.uint8, buffer=tv_img_shm.buf)
+        # # Create shared memory for RGB and depth
+        # tv_img_shm = shared_memory.SharedMemory(create=True, size=np.prod(tv_img_shape) * np.uint8().itemsize)
+        # tv_img_array = np.ndarray(tv_img_shape, dtype=np.uint8, buffer=tv_img_shm.buf)
 
-        tv_depth_shm = shared_memory.SharedMemory(create=True, size=np.prod(tv_depth_shape) * np.uint16().itemsize)
-        tv_depth_array = np.ndarray(tv_depth_shape, dtype=np.uint16, buffer=tv_depth_shm.buf)
+        # tv_depth_shm = shared_memory.SharedMemory(create=True, size=np.prod(tv_depth_shape) * np.uint16().itemsize)
+        # tv_depth_array = np.ndarray(tv_depth_shape, dtype=np.uint16, buffer=tv_depth_shm.buf)
 
-        # Initialize ImageClient_depth
-        img_client = ImageClient_depth(
-            tv_img_shape=tv_img_shape,
-            tv_img_shm_name=tv_img_shm.name,
-            tv_img_shape_resize=None,  # Not resizing for this script
-            tv_img_resized_shm_name=None,
-            server_address="192.168.123.164",  # Assuming same as teleop.py
-            tv_depth_shape=tv_depth_shape,
-            tv_depth_shm_name=tv_depth_shm.name,
-        )
+        # # Initialize ImageClient_depth
+        # img_client = ImageClient_depth(
+        #     tv_img_shape=tv_img_shape,
+        #     tv_img_shm_name=tv_img_shm.name,
+        #     tv_img_shape_resize=None,  # Not resizing for this script
+        #     tv_img_resized_shm_name=None,
+        #     server_address="192.168.123.164",  # Assuming same as teleop.py
+        #     tv_depth_shape=tv_depth_shape,
+        #     tv_depth_shm_name=tv_depth_shm.name,
+        # )
 
-        # Start image receiving thread
-        image_receive_thread = threading.Thread(target=img_client.receive_process, daemon=True)
-        image_receive_thread.start()
+        # # Start image receiving thread
+        # image_receive_thread = threading.Thread(target=img_client.receive_process, daemon=True)
+        # image_receive_thread.start()
 
-        # Wait a bit for images to start streaming
-        time.sleep(2)
+        # # Wait a bit for images to start streaming
+        # time.sleep(2)
 
-        # Capture current RGB and depth images
-        rgb_image = tv_img_array.copy()
-        depth_image = tv_depth_array.copy()
+        # # Capture current RGB and depth images
+        # rgb_image = tv_img_array.copy()
+        # depth_image = tv_depth_array.copy()
+        realsenseCamera=RealSenseCamera(args.camera_id,width=1280,height=720,fps=30)
+        realsenseCamera.init_realsense()
+        rgb_image, depth_image = realsenseCamera.get_frame()
 
         # Combine RGB and depth for Gemini input 
         # Normalize depth for visualization
@@ -120,20 +124,22 @@ def main():
         # Encode the combined image
         success, encoded_image = cv2.imencode('.jpg', combined)
         if not success:
-            print("Failed to encode combined image")
+            logger_mp.error("Failed to encode combined image")
             return
         image_bytes = encoded_image.tobytes()
 
         # Call Gemini with the prompt
         try:
-            response = call_model(image_bytes, PROMPT)
-            trajectory_data = json.loads(response.text)
-            print("Trajectory points from Gemini:")
+            #response = call_model(image_bytes, PROMPT)
+            with open("response.json", "r") as f:
+                trajectory_data = json.load(f)
+            logger_mp.info("Trajectory points from Gemini:")
             for point in trajectory_data:
-                print(point)
+                logger_mp.info(point)
             
             # Optionally, deproject to 3D points using intrinsics
             trajectory_3d = []
+            sol_q_tot=[]
             for point in trajectory_data:
                 u = point['u']
                 v = point['v']
@@ -144,7 +150,7 @@ def main():
                     abs_x1 = int(v / 1000 * (width*2))
                     point_3d = pc.deproject_pixel(abs_y1, abs_x1, depth_mm, intrinsics)
                     trajectory_3d.append(point_3d)
-                    print(f"3D point: {point_3d}")
+                    logger_mp.info(f"3D point: {point_3d}")
 
                     target_pos = point_3d  # il tuo punto nel frame waist
 
@@ -158,21 +164,29 @@ def main():
                     current_lr_arm_q  = arm_ctrl.get_current_dual_arm_q()
                     current_lr_arm_dq = arm_ctrl.get_current_dual_arm_dq()
 
+                    print(current_lr_arm_q, current_lr_arm_dq)
+
                     current_left_pose = arm_ik.get_current_left_wrist_pose(current_lr_arm_q)
-                    # current_right_pose = arm_ik.get_current_right_wrist_pose(current_lr_arm_q)
+                    current_right_pose = arm_ik.get_current_right_wrist_pose(current_lr_arm_q)
+
+                   
 
                     # solve ik using motor data and wrist pose, then use ik results to control arms.
                     time_ik_start = time.time()
+            
                     sol_q, sol_tauff = arm_ik.solve_ik(
                                     left_wrist=current_left_pose,   # posa attuale del braccio sinistro (4x4)
                                     right_wrist=target_pose,         # il tuo target (4x4)
-                                    current_lr_arm_q=current_lr_arm_q,
-                                    current_lr_arm_dq=current_lr_arm_dq)            
+                                    current_lr_arm_motor_q=current_lr_arm_q,
+                                    current_lr_arm_motor_dq=current_lr_arm_dq) 
+                               
                     time_ik_end = time.time()
-                    logger_mp.debug(f"ik:\t{round(time_ik_end - time_ik_start, 6)}")
-                    arm_ctrl.ctrl_dual_arm(sol_q, sol_tauff)
+                    logger_mp.info(f"ik:\t{round(time_ik_end - time_ik_start, 6)}")
+                    #arm_ctrl.ctrl_dual_arm(sol_q, sol_tauff)
                     time.sleep(0.2)  # pausa breve per vedere il movimento
-                    visualize_robot_on_meshcat(sol_q[:7], sol_q[7:14])  # visualizza su meshcat
+                    logger_mp.info(sol_q)
+                    sol_q_tot.append(sol_q)
+            visualize_robot_on_meshcat(sol_q_tot)  # visualizza su meshcat
 
 
             
