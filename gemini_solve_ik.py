@@ -55,7 +55,7 @@ def main():
     tv_depth_shm = None
 
     
-    arm_ik = G1_29_ArmIK(Visualization=True)
+    arm_ik = G1_29_ArmIK(Visualization=False)
     arm_ctrl = G1_29_ArmController(motion_mode=args.motion, simulation_mode=args.sim)
     print("G1_29 Initialized")
             

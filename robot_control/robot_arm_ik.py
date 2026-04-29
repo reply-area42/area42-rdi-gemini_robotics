@@ -23,10 +23,8 @@ class G1_29_ArmIK:
         self.Unit_Test = Unit_Test
         self.Visualization = Visualization
 
-        if not self.Unit_Test:
-            self.robot = pin.RobotWrapper.BuildFromURDF('../assets/g1/g1_body29_hand14.urdf', '../assets/g1/')
-        else:
-            self.robot = pin.RobotWrapper.BuildFromURDF('../assets/g1/g1_body29_hand14.urdf', '../assets/g1/') # for test
+        urdf_path = os.path.join(parent2_dir, 'assets', 'g1', 'g1_dof_with_inspire_hands.urdf')
+        self.robot = pin.RobotWrapper.BuildFromURDF(urdf_path, parent2_dir)
 
         self.mixed_jointsToLockIDs = [
                                         "left_hip_pitch_joint" ,
@@ -295,10 +293,8 @@ class G1_23_ArmIK:
         self.Unit_Test = Unit_Test
         self.Visualization = Visualization
 
-        if not self.Unit_Test:
-            self.robot = pin.RobotWrapper.BuildFromURDF('../assets/g1/g1_body23.urdf', '../assets/g1/')
-        else:
-            self.robot = pin.RobotWrapper.BuildFromURDF('../../assets/g1/g1_body23.urdf', '../../assets/g1/') # for test
+        urdf_path = os.path.join(parent2_dir, 'assets', 'g1', 'g1_body23.urdf')
+        self.robot = pin.RobotWrapper.BuildFromURDF(urdf_path, parent2_dir)
 
         self.mixed_jointsToLockIDs = [
                                         "left_hip_pitch_joint" ,
@@ -522,10 +518,8 @@ class H1_2_ArmIK:
         self.Unit_Test = Unit_Test
         self.Visualization = Visualization
 
-        if not self.Unit_Test:
-            self.robot = pin.RobotWrapper.BuildFromURDF('../assets/h1_2/h1_2.urdf', '../assets/h1_2/')
-        else:
-            self.robot = pin.RobotWrapper.BuildFromURDF('../../assets/h1_2/h1_2.urdf', '../../assets/h1_2/') # for test
+        urdf_path = os.path.join(parent2_dir, 'assets', 'h1_2', 'h1_2.urdf')
+        self.robot = pin.RobotWrapper.BuildFromURDF(urdf_path, parent2_dir)
 
         self.mixed_jointsToLockIDs = [
                                       "left_hip_yaw_joint",
@@ -772,10 +766,8 @@ class H1_ArmIK:
         self.Unit_Test = Unit_Test
         self.Visualization = Visualization
 
-        if not self.Unit_Test:
-            self.robot = pin.RobotWrapper.BuildFromURDF('../assets/h1/h1_with_hand.urdf', '../assets/h1/')
-        else:
-            self.robot = pin.RobotWrapper.BuildFromURDF('../../assets/h1/h1_with_hand.urdf', '../../assets/h1/') # for test
+        urdf_path = os.path.join(parent2_dir, 'assets', 'h1', 'h1_with_hand.urdf')
+        self.robot = pin.RobotWrapper.BuildFromURDF(urdf_path, parent2_dir)
 
         self.mixed_jointsToLockIDs = [
                                         "right_hip_roll_joint",
