@@ -13,6 +13,23 @@ import time
 from camera.image_client_depth import ImageClient_depth
 import shared_memory
 
+import logging_mp
+
+logging_mp.basicConfig(level=logging_mp.INFO)
+logger_mp = logging_mp.getLogger(__name__)
+
+
+from robot_control.robot_arm import G1_29_ArmController
+from robot_control.robot_arm_ik import G1_29_ArmIK
+from robot_control.robot_hand_inspire_dfx import Inspire_Controller
+from image_server.image_client_with_depth import ImageClient_depth
+from image_server.realsense import RealSenseCamera
+from image_server.image_client import ImageClient
+# from teleop.utils.episode_writer import EpisodeWriter
+# from teleop.utils.ipc import IPC_Server
+from sshkeyboard import listen_keyboard, stop_listening
+# import config_mocked_avp
+
 # filepath: /home/area42-user/area42-rdi-gemini_robotics/gemini_solve_ik.py
 
 # Define the prompt for Gemini to return a list of trajectory points
@@ -28,6 +45,12 @@ def main():
 
     tv_img_shm = None
     tv_depth_shm = None
+
+    
+    arm_ik = G1_29_ArmIK(Visualization=True)
+    arm_ctrl = G1_29_ArmController(motion_mode=args.motion, simulation_mode=args.sim)
+    print("G1_29 Initialized")
+            
 
     try: #blocco di try per assicurarsi che la memoria condivisa venga pulita anche in caso di errori
         # Initialize CameraIntrinsics
@@ -111,6 +134,35 @@ def main():
                     point_3d = pc.deproject_pixel(u, v, depth_mm, intrinsics)
                     trajectory_3d.append(point_3d)
                     print(f"3D point: {point_3d}")
+
+                    target_pos = point_3d  # il tuo punto nel frame waist
+
+                    # Orientamento: identità = polso allineato agli assi del waist
+                    # Oppure copia l'orientamento corrente da tele_data
+                    target_pose = np.eye(4)
+                    target_pose[:3, 3] = target_pos
+                    # target_pose[:3, :3] = desired_rotation  # se hai un orientamento specifico
+
+
+                    current_lr_arm_q  = arm_ctrl.get_current_dual_arm_q()
+                    current_lr_arm_dq = arm_ctrl.get_current_dual_arm_dq()
+
+                    current_left_pose = arm_ik.get_current_left_wrist_pose(current_lr_arm_q)
+                    # current_right_pose = arm_ik.get_current_right_wrist_pose(current_lr_arm_q)
+
+                    # solve ik using motor data and wrist pose, then use ik results to control arms.
+                    time_ik_start = time.time()
+                    sol_q, sol_tauff = arm_ik.solve_ik(
+                                    left_wrist=current_left_pose,   # posa attuale del braccio sinistro (4x4)
+                                    right_wrist=target_pose,         # il tuo target (4x4)
+                                    current_lr_arm_q=current_lr_arm_q,
+                                    current_lr_arm_dq=current_lr_arm_dq)            
+                    time_ik_end = time.time()
+                    logger_mp.debug(f"ik:\t{round(time_ik_end - time_ik_start, 6)}")
+                    arm_ctrl.ctrl_dual_arm(sol_q, sol_tauff)
+                    time.sleep(0.2)  # pausa breve per vedere il movimento
+
+
             
         except Exception as e:
             print(f"Error calling Gemini or parsing response: {e}")

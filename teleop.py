@@ -20,16 +20,16 @@ parent_dir = os.path.dirname(current_dir)
 sys.path.append(parent_dir)
 
 from televuer import TeleVuerWrapper
-from teleop.robot_control.robot_arm import G1_29_ArmController
-from teleop.robot_control.robot_arm_ik import G1_29_ArmIK
-from teleop.robot_control.robot_hand_inspire_dfx import Inspire_Controller
-from teleop.image_server.image_client_with_depth import ImageClient_depth
-from teleop.image_server.realsense import RealSenseCamera
-from teleop.image_server.image_client import ImageClient
-from teleop.utils.episode_writer import EpisodeWriter
-from teleop.utils.ipc import IPC_Server
+from robot_control.robot_arm import G1_29_ArmController
+from robot_control.robot_arm_ik import G1_29_ArmIK
+from robot_control.robot_hand_inspire_dfx import Inspire_Controller
+from image_server.image_client_with_depth import ImageClient_depth
+from image_server.realsense import RealSenseCamera
+from image_server.image_client import ImageClient
+# from teleop.utils.episode_writer import EpisodeWriter
+# from teleop.utils.ipc import IPC_Server
 from sshkeyboard import listen_keyboard, stop_listening
-import config_mocked_avp
+# import config_mocked_avp
 
 # for simulation
 from unitree_sdk2py.core.channel import ChannelPublisher

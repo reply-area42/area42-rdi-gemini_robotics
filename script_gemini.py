@@ -144,3 +144,12 @@ if depth_value > 0:
     print(f"point_waist: {point_waist*1000}") # in millimetri
 
 
+# target_pos = point_waist  # il tuo punto nel frame waist
+
+# # Orientamento: identità = polso allineato agli assi del waist
+# # Oppure copia l'orientamento corrente da tele_data
+# target_pose = np.eye(4)
+# target_pose[:3, 3] = target_pos
+# # target_pose[:3, :3] = desired_rotation  # se hai un orientamento specifico
+
+
