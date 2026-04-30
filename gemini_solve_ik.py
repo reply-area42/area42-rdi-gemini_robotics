@@ -139,7 +139,8 @@ def main():
             
             # Optionally, deproject to 3D points using intrinsics
             trajectory_3d = []
-            sol_q_tot=[]
+            viz=None
+            model=None
             for point in trajectory_data:
                 u = point['u']
                 v = point['v']
@@ -185,8 +186,7 @@ def main():
                     #arm_ctrl.ctrl_dual_arm(sol_q, sol_tauff)
                     time.sleep(0.2)  # pausa breve per vedere il movimento
                     logger_mp.info(sol_q)
-                    sol_q_tot.append(sol_q)
-            visualize_robot_on_meshcat(sol_q_tot)  # visualizza su meshcat
+                    viz, model = visualize_robot_on_meshcat(sol_q[:7], sol_q[7:14], urdf_path="assets/g1/g1_29dof.urdf", viz=viz, model=model)
 
 
             

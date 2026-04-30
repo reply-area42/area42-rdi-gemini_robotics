@@ -1,114 +1,132 @@
+
 import time
 import numpy as np
 import pinocchio as pin
 from pinocchio.visualize import MeshcatVisualizer
 import os
 
-def visualize_robot_on_meshcat(sol_q_total, urdf_path="g1_dof_with_inspire_hands.urdf"):
+def visualize_robot_on_meshcat(q_left, q_right, urdf_path="assets/g1/g1_29dof.urdf", viz=None, model=None):
     """
     Visualizza il robot su meshcat con gli angoli calcolati da solve_ik
+    Permette di riutilizzare la stessa istanza di viz e model tra più chiamate.
     Parametri:
         q_left: angoli giunti braccio sinistro [7]
         q_right: angoli giunti braccio destro [7]
         urdf_path: path al file URDF del robot
+        viz: istanza MeshcatVisualizer opzionale
+        model: modello Pinocchio opzionale
     """
-    # Carica il modello dal file URDF
-    urdf_dir = os.path.dirname(os.path.abspath(urdf_path))
-    model, collision_model, visual_model = pin.buildModelsFromUrdf(urdf_path, urdf_dir)
+    if model is None:
+        urdf_dir = os.path.dirname(os.path.abspath(urdf_path))
+        model, collision_model, visual_model = pin.buildModelsFromUrdf(urdf_path, urdf_dir)
+    else:
+        collision_model = viz.collision_model
+        visual_model = viz.visual_model
 
-    # Crea e inizializza il visualizzatore
-    viz = MeshcatVisualizer(model, collision_model, visual_model)
-    viz.initViewer(open=True)   # apre il browser automaticamente
-    viz.loadViewerModel()
-    time.sleep(1)
-    for sol_q in sol_q_total:
-        q_left=sol_q[:7]
-        q_right=sol_q[7:14]
-        # Parte dalla postura neutra e sovrascrive i giunti delle braccia
-        q = pin.neutral(model)
-        n = min(14, model.nq)
-        q[:7]  = q_left[:min(7, n)]
-        q[7:n] = q_right[:min(7, n - 7)]
+    if viz is None:
+        viz = MeshcatVisualizer(model, collision_model, visual_model)
+        viz.initViewer(open=True)
+        viz.loadViewerModel()
 
-        viz.display(q)
-        time.sleep(1)
+    # Parte dalla postura neutra e sovrascrive i giunti delle braccia
+    q = pin.neutral(model)
+    # Imposta solo i giunti delle braccia (indici 15-28)
+    q[15:22] = q_left
+    q[22:29] = q_right
+
+    viz.display(q)
 
     print("Robot visualizzato su meshcat!")
     print(f"Braccio sx: {q_left}")
     print(f"Braccio dx: {q_right}")
     print(f"URL: {viz.viewer.url()}")
-    return viz
+    return viz, model
 
+def test_tutti_giunti(urdf_path="assets/g1/g1_29dof.urdf", amp=1.0, sleep_time=1.5):
+    """
+    Visualizza la variazione di ogni singolo giunto del robot (0-28) separatamente.
+    Ogni giunto viene mosso uno alla volta, gli altri restano a zero.
+    """
+    # Nomi giunti secondo enum (0-28)
+    joint_names = [
+        # Left leg
+        "LeftHipPitch", "LeftHipRoll", "LeftHipYaw", "LeftKnee", "LeftAnklePitch", "LeftAnkleRoll",
+        # Right leg
+        "RightHipPitch", "RightHipRoll", "RightHipYaw", "RightKnee", "RightAnklePitch", "RightAnkleRoll",
+        # Waist
+        "WaistYaw", "WaistRoll", "WaistPitch",
+        # Left arm
+        "LeftShoulderPitch", "LeftShoulderRoll", "LeftShoulderYaw", "LeftElbow", "LeftWristRoll", "LeftWristPitch", "LeftWristYaw",
+        # Right arm
+        "RightShoulderPitch", "RightShoulderRoll", "RightShoulderYaw", "RightElbow", "RightWristRoll", "RightWristPitch", "RightWristYaw",
+        "kNotUsedJoint0", "kNotUsedJoint1", "kNotUsedJoint2", "kNotUsedJoint3", "kNotUsedJoint4", "kNotUsedJoint5"
+    ]
+    n_joints = 34
+    q = np.zeros(n_joints)
+    viz = None
+    model = None
+    print("Test movimento di tutti i giunti del robot:")
+    for i, name in enumerate(joint_names):
+        q_test = np.zeros(n_joints)
+        q_test[i] = amp
+        print(f"Muovo giunto {i}: {name}")
+        if model is None:
+            urdf_dir = os.path.dirname(os.path.abspath(urdf_path))
+            model, collision_model, visual_model = pin.buildModelsFromUrdf(urdf_path, urdf_dir)
+        if viz is None:
+            viz = MeshcatVisualizer(model, collision_model, visual_model)
+            viz.initViewer(open=True)
+            viz.loadViewerModel()
+        q_full = pin.neutral(model)
+        # Aggiorna tutti i giunti secondo la nuova mappatura
+        q_full[:min(len(q_full), n_joints)] = q_test[:min(len(q_full), n_joints)]
+        viz.display(q_full)
+        while True:
+            user_input = input("Premi 'a' per passare al prossimo giunto, oppure 'q' per uscire: ")
+            if user_input.lower() == 'a':
+                break
+            elif user_input.lower() == 'q':
+                print("Test interrotto dall'utente.")
+                return
 
 if __name__ == "__main__":
-    # Diverse pose da visualizzare
+    # Lista di pose con descrizione
+    # Mappatura giunti braccio (sinistra/destra):
+    # [ShoulderPitch, ShoulderRoll, ShoulderYaw, Elbow, WristRoll, WristPitch, WristYaw]
+    # Esempi di pose fisiologiche e realistiche:
     poses = [
-        {
-            "name": "Posizione Neutra",
-            "q_left": np.array([0.0, -0.5, 0.0, -1.5, 0.0, 0.5, 0.0]),
-            "q_right": np.array([0.0, -0.5, 0.0, -1.5, 0.0, 0.5, 0.0])
-        },
-        {
-            "name": "Bracci Sollevati",
-            "q_left": np.array([0.0, -0.2, 0.0, -0.8, 0.0, 0.3, 0.0]),
-            "q_right": np.array([0.0, -0.2, 0.0, -0.8, 0.0, 0.3, 0.0])
-        },
-        {
-            "name": "Braccio Sx Avanti",
-            "q_left": np.array([0.5, -1.0, 0.3, -1.2, 0.2, 0.6, 0.0]),
-            "q_right": np.array([0.0, -0.5, 0.0, -1.5, 0.0, 0.5, 0.0])
-        },
-        {
-            "name": "Braccio Dx Avanti",
-            "q_left": np.array([0.0, -0.5, 0.0, -1.5, 0.0, 0.5, 0.0]),
-            "q_right": np.array([-0.5, -1.0, -0.3, -1.2, -0.2, 0.6, 0.0])
-        },
-        {
-            "name": "Entrambi Sollevati Alto",
-            "q_left": np.array([0.2, 0.2, -0.1, -0.5, 0.1, 0.2, 0.0]),
-            "q_right": np.array([-0.2, 0.2, 0.1, -0.5, -0.1, 0.2, 0.0])
-        },
-        {
-            "name": "Posizione Griping",
-            "q_left": np.array([0.0, -1.2, 0.1, -1.0, 0.0, 0.8, 0.2]),
-            "q_right": np.array([0.0, -1.2, -0.1, -1.0, 0.0, 0.8, -0.2])
-        }
+        # (descrizione, q_left, q_right)
+        ("Neutra (braccia lungo i fianchi)",
+         np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
+         np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])),
+        ("A T (braccia orizzontali)",
+         np.array([0.0, -1.57, 0.0, 0.0, 0.0, 0.0, 0.0]),
+         np.array([0.0, 1.57, 0.0, 0.0, 0.0, 0.0, 0.0])),
+        ("Avanti (braccia tese in avanti)",
+         np.array([-1.57, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
+         np.array([-1.57, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])),
+        ("In alto (braccia sopra la testa)",
+         np.array([1.57, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
+         np.array([1.57, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]))
     ]
 
+    viz = None
+    model = None
     try:
-        # Visualizza prima la posizione neutra per aprire il browser
-        viz = visualize_robot_on_meshcat(poses[0]["q_left"], poses[0]["q_right"])
-        
-        print("\n" + "="*50)
-        print("Animazione posizioni del robot")
-        print("="*50)
-        print(f"Ogni posizione verrà visualizzata per 3 secondi\n")
-        
-        # Cicla attraverso tutte le pose
+        # for desc, q_left, q_right in poses:
+        #     print(f"Visualizzo: {desc}")
+        #     # Puoi anche aggiungere la descrizione come commento qui:
+        #     # {desc}
+        #     viz, model = visualize_robot_on_meshcat(q_left, q_right, viz=viz, model=model)
+        #     time.sleep(10)
+
+        print("\n--- TEST TUTTI I GIUNTI DEL ROBOT ---")
+        test_tutti_giunti(urdf_path="assets/g1/g1_29dof.urdf", sleep_time=10)
+        print("\nVisualizzazione completata! Premi Ctrl+C per uscire")
         while True:
-            for i, pose in enumerate(poses):
-                print(f"[{i+1}/{len(poses)}] {pose['name']}...")
-                q_left = pose['q_left']
-                q_right = pose['q_right']
-                
-                # Aggiorna la visualizzazione
-                urdf_path = "g1_dof_with_inspire_hands.urdf"
-                urdf_dir = os.path.dirname(os.path.abspath(urdf_path))
-                model, collision_model, visual_model = pin.buildModelsFromUrdf(urdf_path, urdf_dir)
-                
-                q = pin.neutral(model)
-                n = min(14, model.nq)
-                q[:7]  = q_left[:min(7, n)]
-                q[7:n] = q_right[:min(7, n - 7)]
-                
-                viz.display(q)
-                time.sleep(3)  # Mostra per 3 secondi
-            
-            print("\n" + "-"*50)
-            print("Ricominciando dal inizio...")
-            print("-"*50 + "\n")
-            
+            time.sleep(1)
     except Exception as e:
         print(f"Errore: {e}")
         import traceback
         traceback.print_exc()
+
