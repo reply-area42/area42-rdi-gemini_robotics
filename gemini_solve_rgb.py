@@ -47,7 +47,7 @@ Coordinates should be in pixel format (u, v) normalized to 0-1000 range.
 
 def main():
     parser = argparse.ArgumentParser(description="Script to initialize CameraIntrinsics, stream RGB and depth, and use Gemini to detect trajectory points.")
-    parser.add_argument('--camera_id', type=str, required=True, help='Camera device ID/serial number')
+    parser.add_argument('--camera_id', type=str, required=False, help='Camera device ID/serial number')
     # ---------------------------  if we need to add more arguments, we can do it here ---------------------------
     args = parser.parse_args()
 
@@ -62,60 +62,70 @@ def main():
             
 
     try: #blocco di try per assicurarsi che la memoria condivisa venga pulita anche in caso di errori
-        # Initialize CameraIntrinsics
-        try:
-            intrinsics = pc.CameraIntrinsics(args.camera_id)
-            logger_mp.info(f"CameraIntrinsics initialized with ID: {args.camera_id}")
-            logger_mp.info(f"fx={intrinsics.fx}, fy={intrinsics.fy}, cx={intrinsics.cx}, cy={intrinsics.cy}")
-        except Exception as e:
-            logger_mp.error(f"Error initializing CameraIntrinsics: {e}")
-            return
 
-        # Set up image client for RGB and depth streaming 
-        # img_config = {
-        #     'fps': 15,
-        #     'head_camera_type': 'realsense',
-        #     'head_camera_image_shape': [720, 1280],  # Head camera resolution
-        #     'depth_image_shape': [720, 1280],
-        #     'head_camera_id_numbers': [args.camera_id],  # Use the provided camera ID
-        # }
+        if args.camera_id:
+            # Initialize CameraIntrinsics
+            try:
+                intrinsics = pc.CameraIntrinsics(args.camera_id)
+                logger_mp.info(f"CameraIntrinsics initialized with ID: {args.camera_id}")
+                logger_mp.info(f"fx={intrinsics.fx}, fy={intrinsics.fy}, cx={intrinsics.cx}, cy={intrinsics.cy}")
+            except Exception as e:
+                logger_mp.error(f"Error initializing CameraIntrinsics: {e}")
+                return
 
-        # tv_img_shape = (img_config['head_camera_image_shape'][0], img_config['head_camera_image_shape'][1], 3)
-        # tv_depth_shape = tuple(img_config['depth_image_shape'])
+            # Set up image client for RGB and depth streaming 
+            # img_config = {
+            #     'fps': 15,
+            #     'head_camera_type': 'realsense',
+            #     'head_camera_image_shape': [720, 1280],  # Head camera resolution
+            #     'depth_image_shape': [720, 1280],
+            #     'head_camera_id_numbers': [args.camera_id],  # Use the provided camera ID
+            # }
 
-        # # Create shared memory for RGB and depth
-        # tv_img_shm = shared_memory.SharedMemory(create=True, size=np.prod(tv_img_shape) * np.uint8().itemsize)
-        # tv_img_array = np.ndarray(tv_img_shape, dtype=np.uint8, buffer=tv_img_shm.buf)
+            # tv_img_shape = (img_config['head_camera_image_shape'][0], img_config['head_camera_image_shape'][1], 3)
+            # tv_depth_shape = tuple(img_config['depth_image_shape'])
 
-        # tv_depth_shm = shared_memory.SharedMemory(create=True, size=np.prod(tv_depth_shape) * np.uint16().itemsize)
-        # tv_depth_array = np.ndarray(tv_depth_shape, dtype=np.uint16, buffer=tv_depth_shm.buf)
+            # # Create shared memory for RGB and depth
+            # tv_img_shm = shared_memory.SharedMemory(create=True, size=np.prod(tv_img_shape) * np.uint8().itemsize)
+            # tv_img_array = np.ndarray(tv_img_shape, dtype=np.uint8, buffer=tv_img_shm.buf)
 
-        # # Initialize ImageClient_depth
-        # img_client = ImageClient_depth(
-        #     tv_img_shape=tv_img_shape,
-        #     tv_img_shm_name=tv_img_shm.name,
-        #     tv_img_shape_resize=None,  # Not resizing for this script
-        #     tv_img_resized_shm_name=None,
-        #     server_address="192.168.123.164",  # Assuming same as teleop.py
-        #     tv_depth_shape=tv_depth_shape,
-        #     tv_depth_shm_name=tv_depth_shm.name,
-        # )
+            # tv_depth_shm = shared_memory.SharedMemory(create=True, size=np.prod(tv_depth_shape) * np.uint16().itemsize)
+            # tv_depth_array = np.ndarray(tv_depth_shape, dtype=np.uint16, buffer=tv_depth_shm.buf)
 
-        # # Start image receiving thread
-        # image_receive_thread = threading.Thread(target=img_client.receive_process, daemon=True)
-        # image_receive_thread.start()
+            # # Initialize ImageClient_depth
+            # img_client = ImageClient_depth(
+            #     tv_img_shape=tv_img_shape,
+            #     tv_img_shm_name=tv_img_shm.name,
+            #     tv_img_shape_resize=None,  # Not resizing for this script
+            #     tv_img_resized_shm_name=None,
+            #     server_address="192.168.123.164",  # Assuming same as teleop.py
+            #     tv_depth_shape=tv_depth_shape,
+            #     tv_depth_shm_name=tv_depth_shm.name,
+            # )
 
-        # # Wait a bit for images to start streaming
-        # time.sleep(2)
+            # # Start image receiving thread
+            # image_receive_thread = threading.Thread(target=img_client.receive_process, daemon=True)
+            # image_receive_thread.start()
 
-        # # Capture current RGB and depth images
-        # rgb_image = tv_img_array.copy()
-        # depth_image = tv_depth_array.copy()
-        realsenseCamera=RealSenseCamera(args.camera_id,width=1280,height=720,fps=30)
-        realsenseCamera.init_realsense()
-        rgb_image, depth_image = realsenseCamera.get_frame()
-        # Salva l'immagine RGB
-        cv2.imwrite("images/rgb_image.png", rgb_image)
+            # # Wait a bit for images to start streaming
+            # time.sleep(2)
+
+            # # Capture current RGB and depth images
+            # rgb_image = tv_img_array.copy()
+            # depth_image = tv_depth_array.copy()
+            # realsenseCamera=RealSenseCamera(args.camera_id,width=1280,height=720,fps=30)
+            # realsenseCamera.init_realsense()
+            # rgb_image, depth_image = realsenseCamera.get_frame()
+            # # Salva l'immagine RGB
+            # cv2.imwrite("images/rgb_image.png", rgb_image)
+            # # Salva l'immagine depth (normalizzata per visualizzazione)
+            # depth_normalized = cv2.normalize(depth_image, None, 0, 255, cv2.NORM_MINMAX)
+            # cv2.imwrite("images/depth_image.png", depth_normalized.astype(np.uint8))
+
+        else:
+            rgb_image = cv2.imread("images/rgb_image.png")
+            depth_image = cv2.imread("images/depth_image.png", cv2.IMREAD_UNCHANGED)  # Assuming depth is saved as 16-bit PNG
+
         # Codifica solo l'immagine RGB per Gemini
         success, encoded_image = cv2.imencode('.jpg', rgb_image)
         if not success:
@@ -143,15 +153,15 @@ def main():
             logger_mp.info("Trajectory points from Gemini:")
 
             # Calcola la profondità per ogni punto usando la depth image locale
-            for point in trajectory_data:
-                u = point['u']
-                v = point['v']
+            for el in trajectory_data:
+                u = el["point"][0]
+                v = el["point"][1]
                 height, width = rgb_image.shape[:2]
                 y = int(u / 1000 * height)
                 x = int(v / 1000 * width)
                 # Prendi la profondità dal frame depth
                 depth_mm = int(depth_image[y, x])
-                point['depth_mm'] = int(depth_mm)
+                #point['depth_mm'] = int(depth_mm)
 
             # Salva la nuova lista con la profondità aggiornata
             with open("response_with_depth.json", "w") as f:

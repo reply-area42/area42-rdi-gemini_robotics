@@ -1,3 +1,5 @@
+import os
+
 import cv2
 import json
 import numpy as np
@@ -23,15 +25,18 @@ def draw_trajectory_points(rgb_image_path, trajectory_json_path, output_path, ra
     points = json.load(f)
 
   h, w = img.shape[:2]
-  for i, pt in enumerate(points):
-    u = pt['u']
-    v = pt['v']
+  for i, pt in enumerate(points):    
+    u = pt["point"][0]
+    v = pt["point"][1]
     # Converti da [0,1000] a pixel
     y = int(u / 1000 * h)
-    x = int(v / 1000 * w)
+    x = int(v / 1000 * w )
     cv2.circle(img, (x, y), radius, color, thickness)
     # opzionale: numerazione
     cv2.putText(img, str(i+1), (x+8, y-8), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255), 1, cv2.LINE_AA)
+
+  if os.path.exists(output_path):
+    os.remove(output_path)
 
   cv2.imwrite(output_path, img)
 import base64
