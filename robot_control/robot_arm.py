@@ -62,7 +62,8 @@ class DataBuffer:
 
 class G1_29_ArmController:
     def __init__(self, motion_mode = False, simulation_mode = False):
-        ##logger_mp.info("Initialize G1_29_ArmController...")
+        logger_mp = logging_mp.getLogger(__name__)
+        logger_mp.info("Initialize G1_29_ArmController...")
         self.q_target = np.zeros(14)
         self.tauff_target = np.zeros(14)
         self.motion_mode = motion_mode
@@ -88,10 +89,11 @@ class G1_29_ArmController:
         else:
             interface = find_interface_with_subnet()
             if interface is None:
-                ##logger_mp.warning("No interface found with IP 192.168.123.*, using default interface for dds communication.")
+                logger_mp.warning("No interface found with IP 192.168.123.*, using default interface for dds communication.")
                 ChannelFactoryInitialize(0)
             else:
                 ChannelFactoryInitialize(0, interface)
+                logger_mp.info(f"Interface {interface} initialized for dds communication.")
 
         if self.motion_mode:
             self.lowcmd_publisher = ChannelPublisher(kTopicLowCommand_Motion, hg_LowCmd)
@@ -109,8 +111,8 @@ class G1_29_ArmController:
 
         while not self.lowstate_buffer.GetData():
             time.sleep(0.1)
-            ##logger_mp.warning("[G1_29_ArmController] Waiting to subscribe dds...")
-        ##logger_mp.info("[G1_29_ArmController] Subscribe dds ok.")
+            logger_mp.warning("[G1_29_ArmController] Waiting to subscribe dds...")
+        logger_mp.info("[G1_29_ArmController] Subscribe dds ok.")
 
         # initialize hg's lowcmd msg
         self.crc = CRC()
@@ -119,9 +121,9 @@ class G1_29_ArmController:
         self.msg.mode_machine = self.get_mode_machine()
 
         self.all_motor_q = self.get_current_motor_q()
-        ##logger_mp.debug(f"Current all body motor state q:\n{self.all_motor_q} \n")
-        ##logger_mp.debug(f"Current two arms motor state q:\n{self.get_current_dual_arm_q()}\n")
-        ##logger_mp.info("Lock all joints except two arms...\n")
+        logger_mp.debug(f"Current all body motor state q:\n{self.all_motor_q} \n")
+        logger_mp.debug(f"Current two arms motor state q:\n{self.get_current_dual_arm_q()}\n")
+        logger_mp.info("Lock all joints except two arms...\n")
 
         arm_indices = set(member.value for member in G1_29_JointArmIndex)
         for id in G1_29_JointIndex:
@@ -141,7 +143,7 @@ class G1_29_ArmController:
                     self.msg.motor_cmd[id].kp = self.kp_high
                     self.msg.motor_cmd[id].kd = self.kd_high
             self.msg.motor_cmd[id].q  = self.all_motor_q[id]
-        #logger_mp.info("Lock OK!\n")
+        logger_mp.info("Lock OK!\n")
 
         #initialize publish thread
         # self.publish_thread = threading.Thread(target=self._ctrl_motor_state)

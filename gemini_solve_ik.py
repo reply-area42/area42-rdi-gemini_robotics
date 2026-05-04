@@ -5,6 +5,7 @@ import logging_mp
 logging_mp.basicConfig(level=logging_mp.INFO)
 logger_mp = logging_mp.getLogger(__name__)
 
+from drawing_utils import draw_trajectory_points
 from wcwidth import width
 from image_server.image_client_with_depth import ImageClient_depth
 import cv2
@@ -114,13 +115,13 @@ def main():
         realsenseCamera=RealSenseCamera(args.camera_id,width=1280,height=720,fps=30)
         realsenseCamera.init_realsense()
         rgb_image, depth_image = realsenseCamera.get_frame()
-
+        #save the image in images foldder
+        cv2.imwrite("images/rgb_image.png", rgb_image)
         # Combine RGB and depth for Gemini input 
         # Normalize depth for visualization
         depth_normalized = cv2.normalize(depth_image, None, 0, 255, cv2.NORM_MINMAX, dtype=cv2.CV_8U)
         depth_colormap = cv2.applyColorMap(depth_normalized, cv2.COLORMAP_JET)
         combined = np.hstack((rgb_image, depth_colormap)).astype(np.uint8)
-
         # Encode the combined image
         success, encoded_image = cv2.imencode('.jpg', combined)
         if not success:
@@ -134,14 +135,21 @@ def main():
             with open("response.json", "r") as f:
                 trajectory_data = json.load(f)
             logger_mp.info("Trajectory points from Gemini:")
-            for point in trajectory_data:
-                logger_mp.info(point)
+            #visualize the points on the RGB image and save it as trajectory_points_overlay.png
+
+            draw_trajectory_points("images/rgb_image.png", "response.json", "images/trajectory_points_overlay.png")
+            #for point in trajectory_data:
+                #logger_mp.info(point)
             
             # Optionally, deproject to 3D points using intrinsics
             trajectory_3d = []
             viz=None
             model=None
+            solve_traj=True
+            sol_q, sol_tauff = None, None
+            logger_mp.info("lunghezza traiettoria: "+str(len(trajectory_data)))
             for point in trajectory_data:
+                logger_mp.info(f"Processing point: {point}")
                 u = point['u']
                 v = point['v']
                 depth_mm = point['depth_mm']
@@ -161,26 +169,26 @@ def main():
                     target_pose[:3, 3] = target_pos
                     # target_pose[:3, :3] = desired_rotation  # se hai un orientamento specifico
 
-
-                    current_lr_arm_q  = arm_ctrl.get_current_dual_arm_q()
-                    current_lr_arm_dq = arm_ctrl.get_current_dual_arm_dq()
-
-                    print(current_lr_arm_q, current_lr_arm_dq)
-
-                    current_left_pose = arm_ik.get_current_left_wrist_pose(current_lr_arm_q)
-                    current_right_pose = arm_ik.get_current_right_wrist_pose(current_lr_arm_q)
-
-                   
-
+                    
+                    if solve_traj:
+                        current_lr_arm_q  = arm_ctrl.get_current_dual_arm_q()
+                        current_lr_arm_dq = arm_ctrl.get_current_dual_arm_dq()
+                        current_left_pose = arm_ik.get_current_left_wrist_pose(current_lr_arm_q)
+                        current_right_pose = arm_ik.get_current_right_wrist_pose(current_lr_arm_q)
+                        solve_traj = False  # risolvo solo il primo punto per test, poi eventualmente tolgo questo flag per risolvere tutta la traiettoria
+                    else:
+                        # prendi i valori precedenti per arm e pose
+                        current_lr_arm_q = sol_q
+                        current_lr_arm_dq = sol_tauff  
+                        #prendo la posa del polso sinistro risultante dall'ik precedente come punto di partenza per il prossimo step di ik, in questo modo creo una catena di movimenti
+                        current_left_pose = arm_ik.get_current_left_wrist_pose(current_lr_arm_q)
                     # solve ik using motor data and wrist pose, then use ik results to control arms.
                     time_ik_start = time.time()
-            
                     sol_q, sol_tauff = arm_ik.solve_ik(
-                                    left_wrist=current_left_pose,   # posa attuale del braccio sinistro (4x4)
-                                    right_wrist=target_pose,         # il tuo target (4x4)
-                                    current_lr_arm_motor_q=current_lr_arm_q,
-                                    current_lr_arm_motor_dq=current_lr_arm_dq) 
-                               
+                        left_wrist=current_left_pose,   # posa attuale del braccio sinistro (4x4)
+                        right_wrist=target_pose,         # il tuo target (4x4)
+                        current_lr_arm_motor_q=current_lr_arm_q,
+                        current_lr_arm_motor_dq=current_lr_arm_dq) 
                     time_ik_end = time.time()
                     logger_mp.info(f"ik:\t{round(time_ik_end - time_ik_start, 6)}")
                     #arm_ctrl.ctrl_dual_arm(sol_q, sol_tauff)
@@ -188,10 +196,15 @@ def main():
                     logger_mp.info(sol_q)
                     viz, model = visualize_robot_on_meshcat(sol_q[:7], sol_q[7:14], urdf_path="assets/g1/g1_29dof.urdf", viz=viz, model=model)
 
+            # Mantieni Meshcat aperto per debug
+            print("\n--- Traiettoria completata. Meshcat rimane aperto per debug. Premi Ctrl+C per uscire. ---")
+            while True:
+                time.sleep(1)
 
-            
         except Exception as e:
+            import traceback
             print(f"Error calling Gemini or parsing response: {e}")
+            traceback.print_exc()
 
     finally:
         # Clean up shared memory (always executed)

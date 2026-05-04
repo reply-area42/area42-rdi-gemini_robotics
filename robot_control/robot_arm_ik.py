@@ -219,7 +219,7 @@ class G1_29_ArmIK:
         self.opti.set_value(self.var_q_last, self.init_data) # for smooth
 
         logger_mp = logging_mp.getLogger(__name__)
-        logger_mp.info("1")
+        
 
         try:
             sol = self.opti.solve()

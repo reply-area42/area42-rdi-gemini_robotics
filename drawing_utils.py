@@ -1,3 +1,39 @@
+import cv2
+import json
+import numpy as np
+
+def draw_trajectory_points(rgb_image_path, trajectory_json_path, output_path, radius=6, color=(0, 0, 255), thickness=-1):
+  """
+  Disegna i punti della traiettoria sull'immagine RGB e salva il risultato.
+  Args:
+    rgb_image_path (str): path all'immagine RGB.
+    trajectory_json_path (str): path al file JSON con la lista dei punti.
+    output_path (str): path dove salvare l'immagine risultante.
+    radius (int): raggio dei cerchi.
+    color (tuple): colore dei punti (BGR).
+    thickness (int): spessore del cerchio (-1 = pieno).
+  """
+  # Carica immagine
+  img = cv2.imread(rgb_image_path)
+  if img is None:
+    raise FileNotFoundError(f"Immagine non trovata: {rgb_image_path}")
+
+  # Carica punti
+  with open(trajectory_json_path, 'r') as f:
+    points = json.load(f)
+
+  h, w = img.shape[:2]
+  for i, pt in enumerate(points):
+    u = pt['u']
+    v = pt['v']
+    # Converti da [0,1000] a pixel
+    y = int(u / 1000 * h)
+    x = int(v / 1000 * w)
+    cv2.circle(img, (x, y), radius, color, thickness)
+    # opzionale: numerazione
+    cv2.putText(img, str(i+1), (x+8, y-8), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255), 1, cv2.LINE_AA)
+
+  cv2.imwrite(output_path, img)
 import base64
 import dataclasses
 from io import BytesIO
